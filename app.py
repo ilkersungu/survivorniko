@@ -33,8 +33,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SKOR KAYDETME ---
-DOSYA_ADI = "skorlar_v3_nikonun30gunu.csv" 
+# --- SKOR KAYDETME (DOSYA ADI DEĞİŞTİ -> SIFIRLANDI) ---
+DOSYA_ADI = "skorlar_v5_top5.csv" 
 
 def skor_yukle():
     if not os.path.exists(DOSYA_ADI):
@@ -47,7 +47,10 @@ def skor_kaydet(isim, can, xp):
     yeni_kayit = pd.DataFrame({"İsim": [isim], "Can": [can], "XP": [xp], "Skor": [toplam_skor]})
     df = pd.concat([df, yeni_kayit], ignore_index=True)
     df = df.sort_values(by="Skor", ascending=False)
-    df = df.head(10)
+    
+    # SADECE İLK 5 KİŞİ KALSIN
+    df = df.head(5)
+    
     df.to_csv(DOSYA_ADI, index=False)
 
 # --- OYUN SABİTLERİ ---
@@ -55,7 +58,7 @@ HEDEF_GUN = 30
 
 # --- BAŞLIK ---
 st.title(f"🛡️ Survivor: Niko'nun 30 Günü")
-st.markdown("**Hedef:** 30 gün boyunca hayatta kal. Şansını değil, sabrını test et.")
+st.markdown("**Hedef:** 30 gün boyunca hayatta kal. Sadece en iyi 5 kişi listeye girer!")
 
 # --- SIDEBAR ---
 st.sidebar.header("👤 Oyuncu")
@@ -67,12 +70,12 @@ zeka = st.sidebar.slider("Zeka (IQ)", 50, 160, 135)
 
 # --- LİDERLİK TABLOSU ---
 st.sidebar.divider()
-st.sidebar.header("🏆 Liderlik Tablosu")
+st.sidebar.header("🏆 Top 5 Liderler")
 df_skor = skor_yukle()
 if not df_skor.empty:
     st.sidebar.dataframe(df_skor, hide_index=True)
 else:
-    st.sidebar.info("Tablo boş.")
+    st.sidebar.info("Liste boş. Zirve seni bekliyor!")
 
 # --- DEĞİŞKENLER ---
 if 'ruh_sagligi' not in st.session_state: st.session_state.ruh_sagligi = 100
@@ -84,6 +87,7 @@ if 'gecmis_can' not in st.session_state: st.session_state.gecmis_can = [100]
 if 'oyun_bitti' not in st.session_state: st.session_state.oyun_bitti = False
 if 'kazandi' not in st.session_state: st.session_state.kazandi = False
 if 'son_olay' not in st.session_state: st.session_state.son_olay = "Başlangıç..."
+if 'son_kategori' not in st.session_state: st.session_state.son_kategori = "siradan" # Renk değişimi için
 if 'skor_kaydedildi' not in st.session_state: st.session_state.skor_kaydedildi = False
 
 # --- MARKET ---
@@ -157,7 +161,7 @@ if not st.session_state.oyun_bitti:
             ("Kodun tek seferde çalıştı", 25, "pozitif", 0)
         ]
         
-        # 3. KRİTİK (%10)
+        # 3. KRİTİK / EFSANE (%10)
         kritik_olaylar = [
             ("DOLANDIRILDIN! Hesabın boşaltıldı", 40, "negatif", -5000),
             ("PİYANGO vurdu! (Şaka değil)", 40, "pozitif", 10000),
@@ -177,13 +181,10 @@ if not st.session_state.oyun_bitti:
         
         if secilen_kategori == "siradan":
             havuz = siradan_olaylar
-            etiket = ""
         elif secilen_kategori == "nadir":
             havuz = nadir_olaylar
-            etiket = " [NADİR]"
         else:
             havuz = kritik_olaylar
-            etiket = " 🔥 [KRİTİK]"
             
         olay_adi, etki, tip, para_etkisi = random.choice(havuz)
         
@@ -197,11 +198,13 @@ if not st.session_state.oyun_bitti:
             if secilen_kategori == "kritik": xp_degisim = -30
             else: xp_degisim = -random.randint(5, 10)
             icon = "🔻"
+            renk_kodu = "red"
         else:
             degisim = etki
             if secilen_kategori == "kritik": xp_degisim = 50
             else: xp_degisim = random.randint(10, 20)
             icon = "💚"
+            renk_kodu = "green"
 
         # Güncellemeler
         st.session_state.ruh_sagligi += degisim
@@ -215,9 +218,13 @@ if not st.session_state.oyun_bitti:
         p_txt = f" | {para_etkisi} TL" if para_etkisi != 0 else ""
         xp_txt = f" ({xp_degisim:+d} XP)"
         
-        msg = f"**Gün {st.session_state.gun_sayaci-1}:** {icon} {olay_adi}{etiket} ({degisim} HP{p_txt}{xp_txt})"
+        # Log Mesajı (Yazı etiketleri yok, sadece renkli metin)
+        # Streamlit markdown renklendirmesi :renk[yazı]
+        msg = f"**Gün {st.session_state.gun_sayaci-1}:** :{renk_kodu}[{olay_adi}] ({degisim} HP{p_txt}{xp_txt})"
+        
         st.session_state.log.insert(0, msg)
-        st.session_state.son_olay = msg
+        st.session_state.son_olay = f"{icon} {olay_adi} ({degisim} HP)"
+        st.session_state.son_kategori = secilen_kategori
 
         if st.session_state.ruh_sagligi <= 0 or st.session_state.gun_sayaci > HEDEF_GUN:
             st.session_state.oyun_bitti = True
@@ -225,10 +232,13 @@ if not st.session_state.oyun_bitti:
             st.rerun()
 
     if st.session_state.gun_sayaci > 1:
-        if "KRİTİK" in st.session_state.son_olay:
-            st.warning(f"📢 {st.session_state.son_olay}")
+        # Son olayın kutusu - Kategorisine göre renk değişimi (Yazı etiketi yok)
+        if st.session_state.son_kategori == "kritik":
+            st.error(f"🔥 KRİTİK GELİŞME: {st.session_state.son_olay}")
+        elif st.session_state.son_kategori == "nadir":
+            st.warning(f"📢 GELİŞME: {st.session_state.son_olay}")
         else:
-            st.info(f"📢 {st.session_state.son_olay}")
+            st.info(f"ℹ️ {st.session_state.son_olay}")
 
 else:
     if not st.session_state.skor_kaydedildi:
@@ -263,4 +273,4 @@ else:
 if not st.session_state.oyun_bitti:
     st.write("### 📜 Olay Günlüğü")
     for satir in st.session_state.log[:5]:
-        st.text(satir.replace("*", ""))
+        st.markdown(satir) # Markdown ile renkleri işle
