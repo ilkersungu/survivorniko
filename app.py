@@ -1,43 +1,33 @@
 import streamlit as st
 import random
-import time
+import pandas as pd # Grafikler için lazım
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Survivor: Niko's Challenge", page_icon="🛡️", layout="centered")
+st.set_page_config(page_title="Survivor: Niko's Economy", page_icon="🛡️", layout="centered")
 
-# --- CSS İLE MAKYAJ (DÜZELTİLDİ) ---
+# --- CSS (Makyaj) ---
 st.markdown("""
 <style>
-    /* Arka plan rengini sildik, senin teman neyse o kalsın */
-    
-    /* O Büyük Butonu Tasarlayalım */
     .stButton>button {
         width: 100%;
-        background: linear-gradient(45deg, #FF512F 0%, #DD2476 100%); /* Turuncu-Pembe Geçiş */
-        color: white !important; /* Yazı rengini beyaza zorla */
-        font-size: 24px;
+        background: linear-gradient(45deg, #FF512F 0%, #DD2476 100%);
+        color: white !important;
+        font-size: 20px;
         font-weight: bold;
-        padding: 15px 30px;
-        border-radius: 15px;
+        border-radius: 12px;
         border: none;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
         transition: all 0.3s ease;
     }
-    
-    /* Üzerine gelince ne olsun? */
     .stButton>button:hover {
-        transform: translateY(-2px); /* Hafif yukarı zıplasın */
-        box-shadow: 0px 6px 20px rgba(0,0,0,0.3);
-        background: linear-gradient(45deg, #DD2476 0%, #FF512F 100%); 
-        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0px 6px 15px rgba(0,0,0,0.3);
     }
-
-    /* İstatistik Kutuları */
     div[data-testid="stMetric"] {
-        background-color: rgba(255, 255, 255, 0.1); /* Hafif şeffaf beyaz */
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
         text-align: center;
     }
 </style>
@@ -47,102 +37,129 @@ st.markdown("""
 HEDEF_GUN = 30 
 
 # --- BAŞLIK ---
-st.title(f"🛡️ Survivor: {HEDEF_GUN} Gün Challenge")
-st.markdown("**Görev:** 30 gün boyunca kaosun içinde hayatta kal. Enerjin biterse, oyun biter.")
+st.title(f"🛡️ Survivor: Ekonomi Modu")
+st.markdown("**Görev:** 30 gün dayan. Paranla strateji yap, iflas etme, delirme.")
 
-# --- KENAR ÇUBUĞU ---
-st.sidebar.header("👤 Karakter Ayarları")
+# --- SIDEBAR (KARAKTER & MARKET) ---
+st.sidebar.header("👤 Profil")
 isim = st.sidebar.text_input("İsim", "Niko")
 zeka = st.sidebar.slider("Zeka (IQ)", 50, 160, 135)
-st.sidebar.info("Not: Yüksek Zeka, negatif olaylardan aldığın hasarı azaltır.")
 
 # --- HAFIZA (SESSION STATE) ---
 if 'ruh_sagligi' not in st.session_state: st.session_state.ruh_sagligi = 100
+if 'para' not in st.session_state: st.session_state.para = 1000 # Başlangıç Parası
 if 'gun_sayaci' not in st.session_state: st.session_state.gun_sayaci = 1
 if 'tecrube' not in st.session_state: st.session_state.tecrube = 0
 if 'log' not in st.session_state: st.session_state.log = []
+if 'gecmis_can' not in st.session_state: st.session_state.gecmis_can = [100] # Grafik için
 if 'oyun_bitti' not in st.session_state: st.session_state.oyun_bitti = False
 if 'kazandi' not in st.session_state: st.session_state.kazandi = False
 
-# --- GÖSTERGE PANELİ (DASHBOARD) ---
-col1, col2, col3 = st.columns(3)
-col1.metric("❤️ Ruh Sağlığı", f"{st.session_state.ruh_sagligi}")
-col2.metric("📅 Gün", f"{st.session_state.gun_sayaci} / {HEDEF_GUN}")
-col3.metric("✨ XP Puanı", st.session_state.tecrube)
+# --- MARKET SİSTEMİ (SIDEBAR) ---
+st.sidebar.divider()
+st.sidebar.header("🛒 Market")
+st.sidebar.write(f"💰 Cüzdan: **{st.session_state.para} TL**")
 
-# İlerleme Çubuğu
-ilerleme = min(st.session_state.gun_sayaci / HEDEF_GUN, 1.0)
-st.progress(ilerleme)
+col_market1, col_market2 = st.sidebar.columns(2)
+
+if col_market1.button("☕ Kahve (200TL)"):
+    if st.session_state.para >= 200:
+        st.session_state.para -= 200
+        st.session_state.ruh_sagligi += 15
+        if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
+        st.sidebar.success("Kahve içtin, ayıldın! (+15 HP)")
+        st.rerun()
+    else:
+        st.sidebar.error("Paran yetersiz!")
+
+if col_market2.button("🎧 Kulaklık (500TL)"):
+    if st.session_state.para >= 500:
+        st.session_state.para -= 500
+        st.session_state.ruh_sagligi += 40
+        if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
+        st.sidebar.success("Dünyayı sessize aldın! (+40 HP)")
+        st.rerun()
+    else:
+        st.sidebar.error("Paran yetersiz!")
+        
+st.sidebar.info("Marketten ürün alarak canını toparlayabilirsin.")
+
+
+# --- DASHBOARD ---
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("❤️ Sağlık", f"{st.session_state.ruh_sagligi}")
+c2.metric("💰 Bakiye", f"{st.session_state.para} TL")
+c3.metric("📅 Gün", f"{st.session_state.gun_sayaci}/{HEDEF_GUN}")
+c4.metric("✨ XP", st.session_state.tecrube)
+
+st.progress(min(st.session_state.gun_sayaci / HEDEF_GUN, 1.0))
 
 st.divider()
 
-# --- OYUN MANTIĞI ---
+# --- OYUN AKIŞI ---
 
 if not st.session_state.oyun_bitti:
     
-    st.subheader(f"🌅 {st.session_state.gun_sayaci}. Günün Sabahı")
+    st.subheader(f"🌅 {st.session_state.gun_sayaci}. Gün")
     
-    # BUTON
     if st.button(f"Zarları At ve {st.session_state.gun_sayaci}. Günü Yaşa 🎲"):
         
-        # OLAY HAVUZU
+        # Olay Havuzu: (Olay, Etki, Tip, Para Etkisi)
+        # Para Etkisi: + para kazandırır, - para kaybettirir
         olaylar = [
-            ("Patron 'Acil toplantı' dedi, 2 saat boş konuştu", 20, "negatif"),
-            ("Production veritabanını yanlışlıkla sildin", 50, "negatif"),
-            ("Maaş gününde ödeme yapılmadı", 25, "negatif"),
-            ("Sabah trafiğinde 2 saat kilitli kaldın", 15, "negatif"),
-            ("Gece eski travmalar uykunu böldü", 30, "negatif"),
-            ("Ofiste üzerine kahve döküldü", 10, "negatif"),
-            ("Kodun çalışmıyor ve nedenini bulamıyorsun", 15, "negatif"),
-            ("En güvendiğin arkadaşın seni sattı", 40, "negatif"),
-            ("Bilgisayarın mavi ekran verdi", 25, "negatif"),
-            ("Markete gittin, her şeye zam gelmiş", 10, "negatif"),
-            ("Anlamsız bir mide bulantısı başladı", 20, "negatif"),
-            ("Birisi arkandan dedikodu yapmış", 30, "negatif"),
-            ("Hafta sonu zorunlu mesai çıktı", 35, "negatif"),
-            ("İnternet kesildi, işler yetişmiyor", 15, "negatif"),
-            ("Yanlışlıkla tüm şirkete 'Reply All' yaptın", 45, "negatif"),
-            ("Sokakta bir kedi bacağına sürtündü", 15, "pozitif"),
-            ("Kodun 'Bug'sız tek seferde çalıştı!", 30, "pozitif"),
-            ("Hesabına beklenmedik bir para yattı", 35, "pozitif"),
-            ("Patron bugün işe gelmedi, ofis rahat", 20, "pozitif"),
-            ("Çok güzel bir gün batımı izledin", 10, "pozitif"),
-            ("Eski bir dost arayıp halini sordu", 20, "pozitif"),
-            ("Bu gece deliksiz ve rüyasız uyudun", 40, "pozitif"),
-            ("Yolda yürürken kaldırımda açan inatçı bir çiçek gördün", 15, "pozitif"),
-            ("Zor bir problemi zekanca çözdün", 25, "pozitif"),
-            ("Radyoda en sevdiğin şarkı çaldı", 10, "pozitif"),
-            ("Sıcak, harika bir duş aldın", 15, "pozitif"),
-            ("Birisi sana 'İyi ki varsın' dedi", 35, "pozitif"),
-            ("Trafik şaşırtıcı derecede açık", 10, "pozitif"),
-            ("Hafta sonu tatili başladı!", 25, "pozitif"),
-            ("Maaşına sürpriz zam yapıldı", 50, "pozitif")
+            ("Maaş yattı!", 10, "pozitif", 5000),
+            ("Yerde 100 TL buldun", 5, "pozitif", 100),
+            ("Freelance işten ödeme geldi", 15, "pozitif", 2000),
+            ("Markette her şeye zam gelmiş", 10, "negatif", -500),
+            ("Kredi kartı borcu kesildi", 15, "negatif", -2000),
+            ("Arkadaşın borcunu ödedi", 10, "pozitif", 500),
+            ("Trafik cezası yedin", 20, "negatif", -1000),
+            ("Bilgisayar bozuldu, tamir parası", 15, "negatif", -3000),
+            
+            # Parasız olaylar (Sadece psikolojik)
+            ("Patron boş konuştu", 20, "negatif", 0),
+            ("Kod tek seferde çalıştı", 20, "pozitif", 0),
+            ("Kedi sevdin", 15, "pozitif", 0),
+            ("Uykusuz kaldın", 25, "negatif", 0),
+            ("Güzel bir duş aldın", 15, "pozitif", 0),
+            ("İftira atıldı", 40, "negatif", 0),
+            ("Eski dost aradı", 20, "pozitif", 0)
         ]
         
-        olay_adi, etki_puani, olay_tipi = random.choice(olaylar)
-        degisim = 0
+        olay_adi, etki, tip, para_etkisi = random.choice(olaylar)
         
-        if olay_tipi == "negatif":
+        degisim = 0
+        if tip == "negatif":
             absorbe = (zeka / 350) 
-            hasar = int(etki_puani * (1 - absorbe))
+            hasar = int(etki * (1 - absorbe))
             degisim = -hasar
             icon = "🔻"
             renk = "red"
         else:
-            degisim = etki_puani
+            degisim = etki
             icon = "💚"
             renk = "green"
 
+        # Güncellemeler
         st.session_state.ruh_sagligi += degisim
+        st.session_state.para += para_etkisi
         st.session_state.tecrube += 10
         st.session_state.gun_sayaci += 1
         
+        # Sınır Kontrolleri
         if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
+        
+        # Grafik İçin Veri Kaydet
+        st.session_state.gecmis_can.append(st.session_state.ruh_sagligi)
 
-        log_mesaji = f"**Gün {st.session_state.gun_sayaci-1}:** :{renk}[{icon} {olay_adi}] ({degisim} HP)"
+        # Log
+        para_yazi = ""
+        if para_etkisi != 0: para_yazi = f" | 💵 {para_etkisi} TL"
+        
+        log_mesaji = f"**Gün {st.session_state.gun_sayaci-1}:** :{renk}[{icon} {olay_adi}] ({degisim} HP{para_yazi})"
         st.session_state.log.insert(0, log_mesaji)
 
-        # KONTROLLER
+        # Bitiş Kontrolü
         if st.session_state.ruh_sagligi <= 0:
             st.session_state.ruh_sagligi = 0
             st.session_state.oyun_bitti = True
@@ -154,26 +171,17 @@ if not st.session_state.oyun_bitti:
             st.rerun()
 
 else:
-    # OYUN BİTTİ EKRANI
     if st.session_state.kazandi:
         st.balloons()
         st.success(f"🎉 TEBRİKLER! {HEDEF_GUN} GÜNÜ TAMAMLADIN!")
-        st.write(f"Toplam XP: {st.session_state.tecrube}")
+        st.write(f"Cüzdan: {st.session_state.para} TL | XP: {st.session_state.tecrube}")
     else:
         st.error("💀 OYUN BİTTİ... Enerjin tükendi.")
-        st.write(f"{st.session_state.gun_sayaci}. Güne kadar gelebildin.")
-
-    # Yeniden Başlat Butonu
+        
     if st.button("🔄 Yeniden Başla"):
         st.session_state.ruh_sagligi = 100
+        st.session_state.para = 1000
         st.session_state.gun_sayaci = 1
         st.session_state.tecrube = 0
         st.session_state.log = []
-        st.session_state.oyun_bitti = False
-        st.session_state.kazandi = False
-        st.rerun()
-
-# --- LOGLAR ---
-st.write("### 📜 Olay Günlüğü")
-for satir in st.session_state.log:
-    st.markdown(satir)
+        st.session_state.gecmis_can = [100]
