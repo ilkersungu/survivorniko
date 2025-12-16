@@ -5,19 +5,16 @@ import time
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Survivor: Niko's Challenge", page_icon="🛡️", layout="centered")
 
-# --- CSS İLE MAKYAJ (SİHİR BURADA) ---
+# --- CSS İLE MAKYAJ (DÜZELTİLDİ) ---
 st.markdown("""
 <style>
-    /* Ana Arka Planı Hafif Gri Yapalım */
-    .stApp {
-        background-color: #f0f2f6;
-    }
+    /* Arka plan rengini sildik, senin teman neyse o kalsın */
     
     /* O Büyük Butonu Tasarlayalım */
     .stButton>button {
         width: 100%;
         background: linear-gradient(45deg, #FF512F 0%, #DD2476 100%); /* Turuncu-Pembe Geçiş */
-        color: white;
+        color: white !important; /* Yazı rengini beyaza zorla */
         font-size: 24px;
         font-weight: bold;
         padding: 15px 30px;
@@ -31,16 +28,16 @@ st.markdown("""
     .stButton>button:hover {
         transform: translateY(-2px); /* Hafif yukarı zıplasın */
         box-shadow: 0px 6px 20px rgba(0,0,0,0.3);
-        background: linear-gradient(45deg, #DD2476 0%, #FF512F 100%); /* Renkler yer değişsin */
-        color: white;
+        background: linear-gradient(45deg, #DD2476 0%, #FF512F 100%); 
+        color: white !important;
     }
 
     /* İstatistik Kutuları */
     div[data-testid="stMetric"] {
-        background-color: white;
+        background-color: rgba(255, 255, 255, 0.1); /* Hafif şeffaf beyaz */
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         text-align: center;
     }
 </style>
@@ -85,10 +82,10 @@ if not st.session_state.oyun_bitti:
     
     st.subheader(f"🌅 {st.session_state.gun_sayaci}. Günün Sabahı")
     
-    # BUTON (Artık renkli ve büyük)
+    # BUTON
     if st.button(f"Zarları At ve {st.session_state.gun_sayaci}. Günü Yaşa 🎲"):
         
-        # OLAY HAVUZU (AYNI LİSTE)
+        # OLAY HAVUZU
         olaylar = [
             ("Patron 'Acil toplantı' dedi, 2 saat boş konuştu", 20, "negatif"),
             ("Production veritabanını yanlışlıkla sildin", 50, "negatif"),
@@ -166,7 +163,7 @@ else:
         st.error("💀 OYUN BİTTİ... Enerjin tükendi.")
         st.write(f"{st.session_state.gun_sayaci}. Güne kadar gelebildin.")
 
-    # Yeniden Başlat Butonu (Bunu da yeşil yapalım)
+    # Yeniden Başlat Butonu
     if st.button("🔄 Yeniden Başla"):
         st.session_state.ruh_sagligi = 100
         st.session_state.gun_sayaci = 1
