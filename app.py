@@ -33,7 +33,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SKOR KAYDETME (DOSYA ADI DEĞİŞTİ -> SIFIRLANDI) ---
+# --- SKOR KAYDETME ---
 DOSYA_ADI = "skorlar_v5_top5.csv" 
 
 def skor_yukle():
@@ -48,7 +48,7 @@ def skor_kaydet(isim, can, xp):
     df = pd.concat([df, yeni_kayit], ignore_index=True)
     df = df.sort_values(by="Skor", ascending=False)
     
-    # SADECE İLK 5 KİŞİ KALSIN
+    # Teknik olarak hala ilk 5'i tutuyoruz ki liste uzamasın
     df = df.head(5)
     
     df.to_csv(DOSYA_ADI, index=False)
@@ -58,7 +58,8 @@ HEDEF_GUN = 30
 
 # --- BAŞLIK ---
 st.title(f"🛡️ Survivor: Niko'nun 30 Günü")
-st.markdown("**Hedef:** 30 gün boyunca hayatta kal. Sadece en iyi 5 kişi listeye girer!")
+# BURAYI DÜZENLEDİK
+st.markdown("**Hedef:** 30 gün boyunca hayatta kal.")
 
 # --- SIDEBAR ---
 st.sidebar.header("👤 Oyuncu")
@@ -70,7 +71,7 @@ zeka = st.sidebar.slider("Zeka (IQ)", 50, 160, 135)
 
 # --- LİDERLİK TABLOSU ---
 st.sidebar.divider()
-st.sidebar.header("🏆 Top 5 Liderler")
+st.sidebar.header("🏆 Liderlik Tablosu")
 df_skor = skor_yukle()
 if not df_skor.empty:
     st.sidebar.dataframe(df_skor, hide_index=True)
@@ -87,7 +88,7 @@ if 'gecmis_can' not in st.session_state: st.session_state.gecmis_can = [100]
 if 'oyun_bitti' not in st.session_state: st.session_state.oyun_bitti = False
 if 'kazandi' not in st.session_state: st.session_state.kazandi = False
 if 'son_olay' not in st.session_state: st.session_state.son_olay = "Başlangıç..."
-if 'son_kategori' not in st.session_state: st.session_state.son_kategori = "siradan" # Renk değişimi için
+if 'son_kategori' not in st.session_state: st.session_state.son_kategori = "siradan"
 if 'skor_kaydedildi' not in st.session_state: st.session_state.skor_kaydedildi = False
 
 # --- MARKET ---
@@ -95,6 +96,8 @@ st.sidebar.divider()
 st.sidebar.header("🛒 Market")
 st.sidebar.write(f"💰 Bakiye: **{st.session_state.para} TL**")
 col_m1, col_m2 = st.sidebar.columns(2)
+
+# Kahve aynı kaldı
 if col_m1.button("☕ Kahve (200)"):
     if st.session_state.para >= 200:
         st.session_state.para -= 200
@@ -102,13 +105,17 @@ if col_m1.button("☕ Kahve (200)"):
         if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
         st.sidebar.success("Can Yenilendi!")
         st.rerun()
-if col_m2.button("🎧 Kulaklık (500)"):
+
+# BURAYI DÜZENLEDİK: KULAKLIK -> KONSER
+if col_m2.button("🎫 Konser (500)"):
     if st.session_state.para >= 500:
         st.session_state.para -= 500
         st.session_state.ruh_sagligi += 40
         if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
-        st.sidebar.success("Can Yenilendi!")
+        st.sidebar.success("Müziğin ritmine kapıldın! (+40 Can)")
         st.rerun()
+    else:
+        st.sidebar.error("Bilet için paran yetmiyor!")
 
 # --- DASHBOARD ---
 c1, c2, c3, c4 = st.columns(4)
@@ -125,7 +132,8 @@ if not st.session_state.oyun_bitti:
     
     st.subheader(f"🌅 {st.session_state.gun_sayaci}. Gün")
     
-    if st.button(f"🎲 Zarları At ve Günü Yaşa"):
+    # BURAYI DÜZENLEDİK: BUTON METNİ
+    if st.button(f"🎲 Yeni Güne Uyan"):
         
         # --- KATEGORİLENDİRİLMİŞ OLAYLAR ---
         
@@ -218,8 +226,7 @@ if not st.session_state.oyun_bitti:
         p_txt = f" | {para_etkisi} TL" if para_etkisi != 0 else ""
         xp_txt = f" ({xp_degisim:+d} XP)"
         
-        # Log Mesajı (Yazı etiketleri yok, sadece renkli metin)
-        # Streamlit markdown renklendirmesi :renk[yazı]
+        # Log Mesajı
         msg = f"**Gün {st.session_state.gun_sayaci-1}:** :{renk_kodu}[{olay_adi}] ({degisim} HP{p_txt}{xp_txt})"
         
         st.session_state.log.insert(0, msg)
@@ -232,7 +239,6 @@ if not st.session_state.oyun_bitti:
             st.rerun()
 
     if st.session_state.gun_sayaci > 1:
-        # Son olayın kutusu - Kategorisine göre renk değişimi (Yazı etiketi yok)
         if st.session_state.son_kategori == "kritik":
             st.error(f"🔥 KRİTİK GELİŞME: {st.session_state.son_olay}")
         elif st.session_state.son_kategori == "nadir":
@@ -273,4 +279,4 @@ else:
 if not st.session_state.oyun_bitti:
     st.write("### 📜 Olay Günlüğü")
     for satir in st.session_state.log[:5]:
-        st.markdown(satir) # Markdown ile renkleri işle
+        st.markdown(satir)
