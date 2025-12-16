@@ -108,4 +108,159 @@ if col_m2.button("🎧 Kulaklık (500)"):
 
 # --- DASHBOARD ---
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("❤️
+c1.metric("❤️ Sağlık", f"{st.session_state.ruh_sagligi}")
+c2.metric("💰 Para", f"{st.session_state.para} TL")
+c3.metric("📅 Gün", f"{st.session_state.gun_sayaci}/{HEDEF_GUN}")
+c4.metric("✨ XP", st.session_state.tecrube)
+st.progress(min(st.session_state.gun_sayaci / HEDEF_GUN, 1.0))
+st.divider()
+
+# --- OYUN AKIŞI ---
+
+if not st.session_state.oyun_bitti:
+    
+    st.subheader(f"🌅 {st.session_state.gun_sayaci}. Gün")
+    
+    if st.button(f"🎲 Zarları At ve Günü Yaşa"):
+        
+        # --- KATEGORİLENDİRİLMİŞ OLAYLAR ---
+        
+        # 1. SIRADAN (%60)
+        siradan_olaylar = [
+            ("Sokakta kedi sevdin", 10, "pozitif", 0),
+            ("Kahve döküldü", 5, "negatif", -50),
+            ("Otobüsü kaçırdın", 10, "negatif", -20),
+            ("Güzel bir şarkı dinledin", 5, "pozitif", 0),
+            ("Market alışverişi yaptın", 5, "negatif", -300),
+            ("Arkadaşınla sohbet ettin", 10, "pozitif", 0),
+            ("İnternet yavaştı", 10, "negatif", 0),
+            ("Yemeği fazla kaçırdın", 5, "negatif", -100),
+            ("Yerde 10 TL buldun", 5, "pozitif", 10),
+            ("Hava çok güzel", 10, "pozitif", 0),
+            ("Klimadan boynun tutuldu", 10, "negatif", 0),
+            ("Patron 'Günaydın' dedi", 5, "pozitif", 0),
+            ("Uykunu iyi aldın", 15, "pozitif", 0),
+            ("Trafik vardı", 10, "negatif", -50)
+        ]
+        
+        # 2. NADİR (%30)
+        nadir_olaylar = [
+            ("Maaş yattı", 10, "pozitif", 5000),
+            ("Trafik cezası yedin", 20, "negatif", -1000),
+            ("Dişin ağrıdı, dolgu yaptırdın", 25, "negatif", -2000),
+            ("Freelance iş geldi", 20, "pozitif", 2000),
+            ("Patron fırça attı", 25, "negatif", 0),
+            ("Eski arkadaşın borcunu ödedi", 15, "pozitif", 500),
+            ("Telefonun camı çatladı", 20, "negatif", -1500),
+            ("Küçük bir hediye aldın", 20, "pozitif", 0),
+            ("Ayakkabın yırtıldı", 15, "negatif", -1000),
+            ("Kodun tek seferde çalıştı", 25, "pozitif", 0)
+        ]
+        
+        # 3. KRİTİK (%10)
+        kritik_olaylar = [
+            ("DOLANDIRILDIN! Hesabın boşaltıldı", 40, "negatif", -5000),
+            ("PİYANGO vurdu! (Şaka değil)", 40, "pozitif", 10000),
+            ("İFTİRA atıldı, çok gerildin", 50, "negatif", 0),
+            ("BÜYÜK TERFİ aldın!", 50, "pozitif", 5000),
+            ("BİLGİSAYAR ÇÖKTÜ, her şey silindi", 45, "negatif", -5000),
+            ("MİRAS gibi para geldi", 40, "pozitif", 7500),
+            ("HASTANELİK oldun (Acil Durum)", 50, "negatif", -3000)
+        ]
+        
+        # --- ZAR ATMA ---
+        secilen_kategori = random.choices(
+            ["siradan", "nadir", "kritik"], 
+            weights=[60, 30, 10], 
+            k=1
+        )[0]
+        
+        if secilen_kategori == "siradan":
+            havuz = siradan_olaylar
+            etiket = ""
+        elif secilen_kategori == "nadir":
+            havuz = nadir_olaylar
+            etiket = " [NADİR]"
+        else:
+            havuz = kritik_olaylar
+            etiket = " 🔥 [KRİTİK]"
+            
+        olay_adi, etki, tip, para_etkisi = random.choice(havuz)
+        
+        degisim = 0
+        xp_degisim = 0 
+        
+        if tip == "negatif":
+            absorbe = (zeka / 350) 
+            hasar = int(etki * (1 - absorbe))
+            degisim = -hasar
+            if secilen_kategori == "kritik": xp_degisim = -30
+            else: xp_degisim = -random.randint(5, 10)
+            icon = "🔻"
+        else:
+            degisim = etki
+            if secilen_kategori == "kritik": xp_degisim = 50
+            else: xp_degisim = random.randint(10, 20)
+            icon = "💚"
+
+        # Güncellemeler
+        st.session_state.ruh_sagligi += degisim
+        st.session_state.para += para_etkisi
+        st.session_state.tecrube += xp_degisim
+        st.session_state.gun_sayaci += 1
+        
+        if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
+        st.session_state.gecmis_can.append(st.session_state.ruh_sagligi)
+
+        p_txt = f" | {para_etkisi} TL" if para_etkisi != 0 else ""
+        xp_txt = f" ({xp_degisim:+d} XP)"
+        
+        msg = f"**Gün {st.session_state.gun_sayaci-1}:** {icon} {olay_adi}{etiket} ({degisim} HP{p_txt}{xp_txt})"
+        st.session_state.log.insert(0, msg)
+        st.session_state.son_olay = msg
+
+        if st.session_state.ruh_sagligi <= 0 or st.session_state.gun_sayaci > HEDEF_GUN:
+            st.session_state.oyun_bitti = True
+            st.session_state.kazandi = (st.session_state.ruh_sagligi > 0)
+            st.rerun()
+
+    if st.session_state.gun_sayaci > 1:
+        if "KRİTİK" in st.session_state.son_olay:
+            st.warning(f"📢 {st.session_state.son_olay}")
+        else:
+            st.info(f"📢 {st.session_state.son_olay}")
+
+else:
+    if not st.session_state.skor_kaydedildi:
+        skor_kaydet(st.session_state.oyuncu_ismi, st.session_state.ruh_sagligi, st.session_state.tecrube)
+        st.session_state.skor_kaydedildi = True 
+        st.toast(f"Skor Tabloya İşlendi!")
+
+    if st.session_state.kazandi:
+        st.balloons()
+        st.success(f"🎉 TEBRİKLER {st.session_state.oyuncu_ismi}!")
+    else:
+        st.error("💀 TÜKENDİN...")
+    
+    toplam_skor = st.session_state.ruh_sagligi + st.session_state.tecrube
+    st.write(f"### 🏅 Toplam Skor: {toplam_skor}")
+    
+    st.write("### 📈 Ruh Sağlığı Grafiği")
+    st.line_chart(st.session_state.gecmis_can)
+
+    if st.button("🔄 Yeniden Başla"):
+        st.session_state.ruh_sagligi = 100
+        st.session_state.para = 1000
+        st.session_state.gun_sayaci = 1
+        st.session_state.tecrube = 0
+        st.session_state.log = []
+        st.session_state.gecmis_can = [100]
+        st.session_state.oyun_bitti = False
+        st.session_state.kazandi = False
+        st.session_state.skor_kaydedildi = False 
+        st.rerun()
+
+if not st.session_state.oyun_bitti:
+    st.write("### 📜 Olay Günlüğü")
+    for satir in st.session_state.log[:5]:
+        st.text(satir.replace("*", ""))
