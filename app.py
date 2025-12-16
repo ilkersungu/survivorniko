@@ -1,85 +1,138 @@
 import streamlit as st
 import random
-import time
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Survivor: Niko's Edition", page_icon="🛡️")
 
-# Başlık ve Giriş
-st.title("🛡️ Survivor Simülasyonu")
-st.write("Hayat zor, ama algoritma daha zor. Bakalım karakterin ne kadar dayanacak?")
+# Başlık
+st.title("🛡️ Survivor Simülasyonu v3.0 (Extended)")
+st.write("Hayat bir kaos teorisidir. Bakalım rastgelelik seni nereye götürecek?")
 
-# Sidebar (Sol Menü) - Karakter Oluşturma
+# --- KENAR ÇUBUĞU (AYARLAR) ---
 st.sidebar.header("Karakterini Yarat")
 isim = st.sidebar.text_input("Karakter Adı", "Niko")
-zeka = st.sidebar.slider("Zeka Seviyesi (IQ)", 50, 150, 120)
-dayaniklilik = st.sidebar.slider("Ruhsal Dayanıklılık", 0, 100, 80)
+zeka = st.sidebar.slider("Zeka Seviyesi (IQ)", 50, 160, 135)
 
-# Session State (Verileri hafızada tutmak için)
+# --- HAFIZA (SESSION STATE) ---
 if 'ruh_sagligi' not in st.session_state:
     st.session_state.ruh_sagligi = 100
 if 'tecrube' not in st.session_state:
     st.session_state.tecrube = 0
 if 'log' not in st.session_state:
     st.session_state.log = []
+if 'oyun_bitti' not in st.session_state:
+    st.session_state.oyun_bitti = False
 
-# Ana Ekran Göstergeleri
+# --- ANA GÖSTERGELER ---
 col1, col2, col3 = st.columns(3)
-col1.metric("Ruh Sağlığı", f"{st.session_state.ruh_sagligi}%")
-col2.metric("Tecrübe Puanı (XP)", st.session_state.tecrube)
-col3.metric("Durum", "Savaşçı" if st.session_state.ruh_sagligi > 20 else "KRİTİK! 🚨")
+col1.metric("❤️ Ruh Sağlığı", f"{st.session_state.ruh_sagligi}")
+col2.metric("✨ Tecrübe (XP)", st.session_state.tecrube)
 
-# Aksiyon Butonu
+durum_yazisi = "Savaşçı"
+if st.session_state.ruh_sagligi <= 30: durum_yazisi = "Yorgun..."
+if st.session_state.ruh_sagligi <= 10: durum_yazisi = "SON DEMLER!"
+if st.session_state.ruh_sagligi <= 0: durum_yazisi = "MEFTA"
+
+col3.metric("Durum", durum_yazisi)
+
 st.divider()
-st.subheader("🔥 Hayatla Yüzleş")
 
-if st.button("Rastgele Bir Sorunla Karşılaş"):
-    # Sorun Havuzu
-    sorunlar = [
-        ("Mobbing Yedin", 80),
-        ("Yanlışlıkla Production DB'yi sildin", 90),
-        ("Maaş geç yattı", 40),
-        ("Trafikte kaldın", 20),
-        ("İftira atıldı", 100)
-    ]
-    
-    olay, zorluk = random.choice(sorunlar)
-    
-    # SENİN FORMÜLÜN BURADA DEVREYE GİRİYOR
-    # Zeka ne kadar yüksekse, hasarı o kadar absorbe eder (Basit bir mantık)
-    # Zeka 100 ise hasarı %50 azaltır, Zeka 150 ise %75 azaltır gibi.
-    absorbe_orani = (zeka / 200) 
-    alinan_hasar = int(zorluk * (1 - absorbe_orani))
-    
-    # Dayanıklılık bonusu: Eğer dayanıklılık yüksekse kritik hasar almaz
-    if dayaniklilik > 80:
-        alinan_hasar -= 5
-    
-    if alinan_hasar < 0: alinan_hasar = 0
+# --- OYUN MANTIĞI ---
 
-    # Güncelleme
-    st.session_state.ruh_sagligi -= alinan_hasar
-    st.session_state.tecrube += int(zorluk / 2)
+if st.session_state.ruh_sagligi > 0:
+    st.subheader("🎲 Kader Çarkını Çevir")
     
-    # Loglama
-    yeni_log = f"🛑 **OLAY:** {olay} (Zorluk: {zorluk}) -> **Hasar:** -{alinan_hasar} HP | **Kazanılan XP:** +{int(zorluk/2)}"
-    st.session_state.log.insert(0, yeni_log) # En yeniyi başa ekle
+    if st.button("Günü Yaşa"):
+        # GENİŞLETİLMİŞ OLAY HAVUZU (40 ADET)
+        # Format: ("Olay Adı", Etki Puanı, "Tip")
+        olaylar = [
+            # --- NEGATİF OLAYLAR (HAYATIN SİLLELERİ) ---
+            ("Patron sebepsiz yere bağırdı", 25, "negatif"),
+            ("Yanlışlıkla Production DB'yi uçurdun", 40, "negatif"),
+            ("Maaş yine geç yattı", 20, "negatif"),
+            ("Trafikte 2 saat adım atılmadı", 15, "negatif"),
+            ("Eski travmalar gece uykunu kaçırdı", 30, "negatif"),
+            ("İş yerinde dedikodu yapıldı, ihale sana kaldı", 35, "negatif"),
+            ("Markete gittin, her şeye %50 zam gelmiş", 15, "negatif"),
+            ("Yazdığın kod çalışmadı, hatayı bulamıyorsun", 10, "negatif"),
+            ("Annenle telefonda gergin bir konuşma geçti", 25, "negatif"),
+            ("Mide bulantısı ve anksiyete atağı", 20, "negatif"),
+            ("Bilgisayar tam sunum yaparken mavi ekran verdi", 20, "negatif"),
+            ("En sevdiğin gömleğe kahve döküldü", 5, "negatif"),
+            ("Yağmura yakalandın, şemsiye yok", 10, "negatif"),
+            ("Kredi kartı ekstresi beklediğinden yüksek geldi", 25, "negatif"),
+            ("Birisi zekanı küçümseyen bir laf etti", 30, "negatif"),
+            ("İnternet kesildi, işler yetişmiyor", 15, "negatif"),
+            ("Hafta sonu mesaiye çağrıldın", 35, "negatif"),
+            ("Yanlış kişiye güvendin", 40, "negatif"),
+            ("Klimadan boynun tutuldu", 10, "negatif"),
+            
+            # --- POZİTİF OLAYLAR (NEFES ALDIRANLAR) ---
+            ("Sokakta bir kedi yanına gelip kendini sevdirdi", 15, "pozitif"),
+            ("Kodun 'Warning' bile vermeden tek seferde çalıştı", 25, "pozitif"),
+            ("Hesapta olmayan bir para geldi", 30, "pozitif"),
+            ("Patron bugün ofise gelmedi!", 20, "pozitif"),
+            ("Çok güzel bir gün batımı yakaladın", 10, "pozitif"),
+            ("Eski bir dost arayıp halini hatrını sordu", 20, "pozitif"),
+            ("Gece deliksiz ve rüyasız uyudun", 35, "pozitif"),
+            ("Yolda yürürken kaldırımda açan bir çiçek gördün", 15, "pozitif"),
+            ("Zor bir problemi zekanca çözdün, herkes şaşırdı", 25, "pozitif"),
+            ("Radyoda en sevdiğin şarkı çaldı", 10, "pozitif"),
+            ("Sıcak, güzel bir duş aldın", 15, "pozitif"),
+            ("Birisi sana 'İyi ki varsın' dedi", 30, "pozitif"),
+            ("Trafik şaşırtıcı derecede açık", 10, "pozitif"),
+            ("Hafta sonu tatili başladı", 20, "pozitif"),
+            ("En sevdiğin tatlıyı yedin", 10, "pozitif"),
+            ("Dışarıda mis gibi yağmur sonrası toprak kokusu var", 15, "pozitif"),
+            ("Maaşına beklenmedik bir zam yapıldı", 40, "pozitif"),
+            ("Bugün kimse seni darlamadı, sakin bir gün", 20, "pozitif")
+        ]
+        
+        olay_adi, etki_puani, olay_tipi = random.choice(olaylar)
+        
+        degisim = 0
+        
+        if olay_tipi == "negatif":
+            # Zeka faktörü: Yüksek zeka hasarı yumuşatır
+            absorbe = (zeka / 350) 
+            hasar = int(etki_puani * (1 - absorbe))
+            degisim = -hasar
+            icon = "🔻"
+            renk = "red"
+        else:
+            degisim = etki_puani
+            icon = "💚"
+            renk = "green"
 
-    if st.session_state.ruh_sagligi <= 0:
-        st.error("💀 OYUN BİTTİ! Karakter tükendi.")
-        st.session_state.ruh_sagligi = 0
-    else:
-        st.success("Hala ayaktasın! Direnmeye devam.")
+        # Güncelleme
+        st.session_state.ruh_sagligi += degisim
+        st.session_state.tecrube += 10
+        
+        # Sınır Kontrolü
+        if st.session_state.ruh_sagligi > 100: st.session_state.ruh_sagligi = 100
 
-# Geçmiş Logları Yazdır
-st.divider()
+        # Loglama (Renkli ve İkonlu)
+        log_mesaji = f":{renk}[{icon} **{olay_adi}**] ({degisim} HP)"
+        st.session_state.log.insert(0, log_mesaji)
+
+        # Game Over
+        if st.session_state.ruh_sagligi <= 0:
+            st.session_state.ruh_sagligi = 0
+            st.session_state.oyun_bitti = True
+            st.rerun()
+
+else:
+    st.error("💀 OYUN BİTTİ! Ruhsal sermaye tükendi.")
+    st.info(f"🏆 Toplam Kazanılan Tecrübe: **{st.session_state.tecrube} XP**")
+    
+    if st.button("🔄 Yeniden Doğ (Reborn)"):
+        st.session_state.ruh_sagligi = 100
+        st.session_state.tecrube = 0
+        st.session_state.log = []
+        st.session_state.oyun_bitti = False
+        st.rerun()
+
+# --- GEÇMİŞ ---
 st.write("### 📜 Savaş Günlüğü")
-for log in st.session_state.log:
-    st.markdown(log)
-
-# Sıfırlama Butonu
-if st.button("Simülasyonu Sıfırla"):
-    st.session_state.ruh_sagligi = 100
-    st.session_state.tecrube = 0
-    st.session_state.log = []
-    st.rerun()
+for satir in st.session_state.log:
+    st.markdown(satir)
